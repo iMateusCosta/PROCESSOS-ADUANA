@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Follow-up Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-100 p-4">
+
+    <div class="max-w-6xl mx-auto bg-white p-6 rounded-xl shadow-md">
+        <h1 class="text-3xl font-extrabold mb-6 text-slate-800">🚢 Gestão de Follow-up</h1>
+
+        <form id="processoForm" class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-8 bg-slate-50 p-4 rounded-lg border">
+            <input type="text" id="referencia" placeholder="Referência" required class="border p-2 rounded">
+            <input type="text" id="cliente" placeholder="Cliente" required class="border p-2 rounded">
+            <input type="date" id="data_eta" required class="border p-2 rounded">
+            <input type="text" id="observacoes" placeholder="Observações" class="border p-2 rounded">
+            <button type="submit" class="bg-blue-600 text-white font-bold rounded hover:bg-blue-700 transition">Adicionar</button>
+        </form>
+
+        <div class="flex space-x-2 mb-4 border-b">
+            <button onclick="mudarAba('pendente')" id="tab-pendente" class="px-4 py-2 font-bold border-b-4 border-blue-600 text-blue-600">Em Aberto</button>
+            <button onclick="mudarAba('finalizado')" id="tab-finalizado" class="px-4 py-2 font-bold border-b-4 border-transparent text-gray-500 hover:text-blue-400">Finalizados</button>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-800 text-white">
+                        <th class="p-3 border">ETA</th>
+                        <th class="p-3 border">Referência</th>
+                        <th class="p-3 border">Cliente</th>
+                        <th class="p-3 border text-center">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaCorpo"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://qyadsgivfqzmtjgzmxhr.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_PcsW3cKl6uRz1x4jSwQulw_QC4T1pMP';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let abaAtual = 'pendente';
+
+        async function carregarDados() {
+            const { data, error } = await _supabase
+                .from('processos')
+                .select('*')
+                .eq('status', abaAtual)
+                .order('data_eta', { ascending: true });
+
+            const tabela = document.getElementById('tabelaCorpo');
+            tabela.innerHTML = '';
+
+            data.forEach(item => {
+                tabela.innerHTML += `
+                    <tr class="hover:bg-slate-50 border-b">
+                        <td class="p-3">
+                            <input type="date" value="${item.data_eta}" 
+                                onchange="atualizarEta('${item.id}', this.value)"
+                                class="border rounded p-1 text-sm focus:ring-2 focus:ring-blue-300">
+                        </td>
+                        <td class="p-3 font-medium">${item.referencia}</td>
+                        <td class="p-3">${item.cliente}</td>
+                        <td class="p-3 flex justify-center space-x-2">
+                            ${abaAtual === 'pendente' ? 
+                                `<button onclick="alterarStatus('${item.id}', 'finalizado')" class="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600">Finalizar</button>` : 
+                                `<button onclick="alterarStatus('${item.id}', 'pendente')" class="bg-orange-500 text-white px-3 py-1 rounded text-xs hover:bg-orange-600">Reabrir</button>`
+                            }
+                            <button onclick="excluir('${item.id}')" class="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600">Excluir</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // --- FUNÇÕES DE AÇÃO ---
+
+        async function atualizarEta(id, novaData) {
+            await _supabase.from('processos').update({ data_eta: novaData }).eq('id', id);
+            carregarDados();
+        }
+
+        async function alterarStatus(id, novoStatus) {
+            await _supabase.from('processos').update({ status: novoStatus }).eq('id', id);
+            carregarDados();
+        }
+
+        async function excluir(id) {
+            if (confirm('Tem certeza que deseja excluir permanentemente?')) {
+                await _supabase.from('processos').delete().eq('id', id);
+                carregarDados();
+            }
+        }
+
+        function mudarAba(status) {
+            abaAtual = status;
+            document.getElementById('tab-pendente').className = status === 'pendente' ? 'px-4 py-2 font-bold border-b-4 border-blue-600 text-blue-600' : 'px-4 py-2 font-bold border-b-4 border-transparent text-gray-500';
+            document.getElementById('tab-finalizado').className = status === 'finalizado' ? 'px-4 py-2 font-bold border-b-4 border-blue-600 text-blue-600' : 'px-4 py-2 font-bold border-b-4 border-transparent text-gray-500';
+            carregarDados();
+        }
+
+        document.getElementById('processoForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const novo = {
+                referencia: document.getElementById('referencia').value,
+                cliente: document.getElementById('cliente').value,
+                data_eta: document.getElementById('data_eta').value,
+                observacoes: document.getElementById('observacoes').value,
+                status: 'pendente'
+            };
+            await _supabase.from('processos').insert([novo]);
+            e.target.reset();
+            carregarDados();
+        });
+
+        carregarDados();
+    </script>
+</body>
+</html>
