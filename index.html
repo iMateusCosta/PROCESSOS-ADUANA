@@ -54,44 +54,46 @@
         let abaAtual = 'pendente';
 
         async function carregarDados() {
-            const { data, error } = await _supabase
-                .from('processos')
-                .select('*')
-                .eq('status', abaAtual)
-                .order('data_eta', { ascending: true });
+    const { data, error } = await _supabase
+        .from('processos')
+        .select('*')
+        .eq('status', abaAtual)
+        .order('data_eta', { ascending: true }); // Ordena do mais próximo ao mais distante
 
-            if (error) return console.error(error);
+    if (error) {
+        console.error("Erro na busca:", error);
+        return;
+    }
 
-            const tabela = document.getElementById('tabelaCorpo');
-            tabela.innerHTML = '';
+    const tabela = document.getElementById('tabelaCorpo');
+    tabela.innerHTML = '';
 
-            data.forEach(item => {
-                tabela.innerHTML += `
-                    <tr class="hover:bg-blue-50 border-b transition-colors">
-                        <td class="p-3 w-40">
-                            <input type="date" value="${item.data_eta}" 
-                                onchange="atualizarCampo('${item.id}', 'data_eta', this.value)"
-                                class="w-full border-transparent hover:border-gray-300 border bg-transparent rounded p-1 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none">
-                        </td>
-                        <td class="p-3 font-medium text-slate-700">${item.referencia}</td>
-                        <td class="p-3 text-slate-600">${item.cliente}</td>
-                        <td class="p-3">
-                            <input type="text" value="${item.observacoes || ''}" 
-                                placeholder="Clique para editar..."
-                                onblur="atualizarCampo('${item.id}', 'observacoes', this.value)"
-                                class="w-full border-transparent hover:border-gray-300 border bg-transparent rounded p-1 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none italic">
-                        </td>
-                        <td class="p-3 flex justify-center space-x-1">
-                            ${abaAtual === 'pendente' ? 
-                                `<button onclick="alterarStatus('${item.id}', 'finalizado')" title="Finalizar" class="bg-green-100 text-green-700 p-1.5 rounded hover:bg-green-200 uppercase text-[10px] font-bold">Concluir</button>` : 
-                                `<button onclick="alterarStatus('${item.id}', 'pendente')" title="Reabrir" class="bg-orange-100 text-orange-700 p-1.5 rounded hover:bg-orange-200 uppercase text-[10px] font-bold">Reabrir</button>`
-                            }
-                            <button onclick="excluir('${item.id}')" title="Excluir" class="bg-red-100 text-red-700 p-1.5 rounded hover:bg-red-200 uppercase text-[10px] font-bold">Excluir</button>
-                        </td>
-                    </tr>
-                `;
-            });
-        }
+    data.forEach(item => {
+        tabela.innerHTML += `
+            <tr class="hover:bg-blue-50 border-b transition-colors">
+                <td class="p-3 w-40">
+                    <input type="date" value="${item.data_eta}" 
+                        onchange="atualizarCampo('${item.id}', 'data_eta', this.value)"
+                        class="w-full border-transparent hover:border-gray-300 border bg-transparent rounded p-1 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-bold">
+                </td>
+                <td class="p-3 font-medium text-slate-700">${item.referencia}</td>
+                <td class="p-3 text-slate-600">${item.cliente}</td>
+                <td class="p-3">
+                    <input type="text" value="${item.observacoes || ''}" 
+                        onblur="atualizarCampo('${item.id}', 'observacoes', this.value)"
+                        class="w-full border-transparent hover:border-gray-300 border bg-transparent rounded p-1 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none">
+                </td>
+                <td class="p-3 flex justify-center space-x-1">
+                    ${abaAtual === 'pendente' ? 
+                        `<button onclick="alterarStatus('${item.id}', 'finalizado')" class="bg-green-100 text-green-700 p-1.5 rounded hover:bg-green-200 text-[10px] font-bold">Concluir</button>` : 
+                        `<button onclick="alterarStatus('${item.id}', 'pendente')" class="bg-orange-100 text-orange-700 p-1.5 rounded hover:bg-orange-200 text-[10px] font-bold">Reabrir</button>`
+                    }
+                    <button onclick="excluir('${item.id}')" class="bg-red-100 text-red-700 p-1.5 rounded hover:bg-red-200 text-[10px] font-bold">Excluir</button>
+                </td>
+            </tr>
+        `;
+    });
+}
 
         // --- FUNÇÕES DE ATUALIZAÇÃO ---
 
@@ -150,3 +152,4 @@
     </script>
 </body>
 </html>
+
