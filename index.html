@@ -3,46 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Follow-up Pro</title>
+    <title>Follow-up Pro - Editável</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-slate-100 p-4">
+<body class="bg-slate-100 p-4 md:p-8">
 
-    <div class="max-w-6xl mx-auto bg-white p-6 rounded-xl shadow-md">
-        <h1 class="text-3xl font-extrabold mb-6 text-slate-800">🚢 Gestão de Follow-up</h1>
-
-        <form id="processoForm" class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-8 bg-slate-50 p-4 rounded-lg border">
-            <input type="text" id="referencia" placeholder="Referência" required class="border p-2 rounded">
-            <input type="text" id="cliente" placeholder="Cliente" required class="border p-2 rounded">
-            <input type="date" id="data_eta" required class="border p-2 rounded">
-            <input type="text" id="observacoes" placeholder="Observações" class="border p-2 rounded">
-            <button type="submit" class="bg-blue-600 text-white font-bold rounded hover:bg-blue-700 transition">Adicionar</button>
-        </form>
-
-        <div class="flex space-x-2 mb-4 border-b">
-            <button onclick="mudarAba('pendente')" id="tab-pendente" class="px-4 py-2 font-bold border-b-4 border-blue-600 text-blue-600">Em Aberto</button>
-            <button onclick="mudarAba('finalizado')" id="tab-finalizado" class="px-4 py-2 font-bold border-b-4 border-transparent text-gray-500 hover:text-blue-400">Finalizados</button>
+    <div class="max-w-6xl mx-auto bg-white p-6 rounded-xl shadow-lg">
+        <div class="flex justify-between items-center mb-6 border-b pb-4">
+            <h1 class="text-3xl font-extrabold text-slate-800">🚢 Gestão de Follow-up</h1>
+            <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold uppercase tracking-wider">Supabase Sync</span>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
+        <form id="processoForm" class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-8 bg-slate-50 p-4 rounded-lg border border-slate-200">
+            <input type="text" id="referencia" placeholder="Referência" required class="border p-2 rounded outline-blue-500 text-sm">
+            <input type="text" id="cliente" placeholder="Cliente" required class="border p-2 rounded outline-blue-500 text-sm">
+            <input type="date" id="data_eta" required class="border p-2 rounded outline-blue-500 text-sm">
+            <input type="text" id="observacoes" placeholder="Observações" class="border p-2 rounded outline-blue-500 text-sm">
+            <button type="submit" class="bg-blue-600 text-white font-bold rounded py-2 hover:bg-blue-700 transition shadow-sm">Adicionar</button>
+        </form>
+
+        <div class="flex space-x-4 mb-4">
+            <button onclick="mudarAba('pendente')" id="tab-pendente" class="pb-2 px-1 font-bold border-b-2 border-blue-600 text-blue-600 transition-all">Pendentes</button>
+            <button onclick="mudarAba('finalizado')" id="tab-finalizado" class="pb-2 px-1 font-bold border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition-all">Finalizados</button>
+        </div>
+
+        <div class="overflow-x-auto border rounded-lg">
+            <table class="w-full text-left border-collapse bg-white">
                 <thead>
-                    <tr class="bg-slate-800 text-white">
-                        <th class="p-3 border">ETA</th>
-                        <th class="p-3 border">Referência</th>
-                        <th class="p-3 border">Cliente</th>
-                        <th class="p-3 border text-center">Ações</th>
+                    <tr class="bg-slate-800 text-white text-sm">
+                        <th class="p-3 font-semibold">ETA</th>
+                        <th class="p-3 font-semibold">Referência</th>
+                        <th class="p-3 font-semibold">Cliente</th>
+                        <th class="p-3 font-semibold">Observações (Editável)</th>
+                        <th class="p-3 font-semibold text-center">Ações</th>
                     </tr>
                 </thead>
-                <tbody id="tabelaCorpo"></tbody>
+                <tbody id="tabelaCorpo" class="text-sm">
+                    </tbody>
             </table>
         </div>
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://qyadsgivfqzmtjgzmxhr.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_PcsW3cKl6uRz1x4jSwQulw_QC4T1pMP';
+        // CONFIGURAÇÕES DO SUPABASE
+       const SUPABASE_URL = 'https://qyadsgivfqzmtjgzmxhr.supabase.co';
+       const SUPABASE_KEY = 'sb_publishable_PcsW3cKl6uRz1x4jSwQulw_QC4T1pMP';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let abaAtual = 'pendente';
@@ -54,36 +60,49 @@
                 .eq('status', abaAtual)
                 .order('data_eta', { ascending: true });
 
+            if (error) return console.error(error);
+
             const tabela = document.getElementById('tabelaCorpo');
             tabela.innerHTML = '';
 
             data.forEach(item => {
                 tabela.innerHTML += `
-                    <tr class="hover:bg-slate-50 border-b">
-                        <td class="p-3">
+                    <tr class="hover:bg-blue-50 border-b transition-colors">
+                        <td class="p-3 w-40">
                             <input type="date" value="${item.data_eta}" 
-                                onchange="atualizarEta('${item.id}', this.value)"
-                                class="border rounded p-1 text-sm focus:ring-2 focus:ring-blue-300">
+                                onchange="atualizarCampo('${item.id}', 'data_eta', this.value)"
+                                class="w-full border-transparent hover:border-gray-300 border bg-transparent rounded p-1 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none">
                         </td>
-                        <td class="p-3 font-medium">${item.referencia}</td>
-                        <td class="p-3">${item.cliente}</td>
-                        <td class="p-3 flex justify-center space-x-2">
+                        <td class="p-3 font-medium text-slate-700">${item.referencia}</td>
+                        <td class="p-3 text-slate-600">${item.cliente}</td>
+                        <td class="p-3">
+                            <input type="text" value="${item.observacoes || ''}" 
+                                placeholder="Clique para editar..."
+                                onblur="atualizarCampo('${item.id}', 'observacoes', this.value)"
+                                class="w-full border-transparent hover:border-gray-300 border bg-transparent rounded p-1 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none italic">
+                        </td>
+                        <td class="p-3 flex justify-center space-x-1">
                             ${abaAtual === 'pendente' ? 
-                                `<button onclick="alterarStatus('${item.id}', 'finalizado')" class="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600">Finalizar</button>` : 
-                                `<button onclick="alterarStatus('${item.id}', 'pendente')" class="bg-orange-500 text-white px-3 py-1 rounded text-xs hover:bg-orange-600">Reabrir</button>`
+                                `<button onclick="alterarStatus('${item.id}', 'finalizado')" title="Finalizar" class="bg-green-100 text-green-700 p-1.5 rounded hover:bg-green-200 uppercase text-[10px] font-bold">Concluir</button>` : 
+                                `<button onclick="alterarStatus('${item.id}', 'pendente')" title="Reabrir" class="bg-orange-100 text-orange-700 p-1.5 rounded hover:bg-orange-200 uppercase text-[10px] font-bold">Reabrir</button>`
                             }
-                            <button onclick="excluir('${item.id}')" class="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600">Excluir</button>
+                            <button onclick="excluir('${item.id}')" title="Excluir" class="bg-red-100 text-red-700 p-1.5 rounded hover:bg-red-200 uppercase text-[10px] font-bold">Excluir</button>
                         </td>
                     </tr>
                 `;
             });
         }
 
-        // --- FUNÇÕES DE AÇÃO ---
+        // --- FUNÇÕES DE ATUALIZAÇÃO ---
 
-        async function atualizarEta(id, novaData) {
-            await _supabase.from('processos').update({ data_eta: novaData }).eq('id', id);
-            carregarDados();
+        // Função genérica para atualizar qualquer campo (ETA ou Obs)
+        async function atualizarCampo(id, campo, valor) {
+            const updateData = {};
+            updateData[campo] = valor;
+            
+            const { error } = await _supabase.from('processos').update(updateData).eq('id', id);
+            if (error) alert("Erro ao salvar: " + error.message);
+            // Não recarregamos a tela inteira aqui para não perder o foco do usuário
         }
 
         async function alterarStatus(id, novoStatus) {
@@ -92,7 +111,7 @@
         }
 
         async function excluir(id) {
-            if (confirm('Tem certeza que deseja excluir permanentemente?')) {
+            if (confirm('Deseja excluir permanentemente este registro?')) {
                 await _supabase.from('processos').delete().eq('id', id);
                 carregarDados();
             }
@@ -100,8 +119,16 @@
 
         function mudarAba(status) {
             abaAtual = status;
-            document.getElementById('tab-pendente').className = status === 'pendente' ? 'px-4 py-2 font-bold border-b-4 border-blue-600 text-blue-600' : 'px-4 py-2 font-bold border-b-4 border-transparent text-gray-500';
-            document.getElementById('tab-finalizado').className = status === 'finalizado' ? 'px-4 py-2 font-bold border-b-4 border-blue-600 text-blue-600' : 'px-4 py-2 font-bold border-b-4 border-transparent text-gray-500';
+            const btnPendente = document.getElementById('tab-pendente');
+            const btnFinalizado = document.getElementById('tab-finalizado');
+
+            if(status === 'pendente') {
+                btnPendente.className = "pb-2 px-1 font-bold border-b-2 border-blue-600 text-blue-600 transition-all";
+                btnFinalizado.className = "pb-2 px-1 font-bold border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition-all";
+            } else {
+                btnFinalizado.className = "pb-2 px-1 font-bold border-b-2 border-blue-600 text-blue-600 transition-all";
+                btnPendente.className = "pb-2 px-1 font-bold border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition-all";
+            }
             carregarDados();
         }
 
