@@ -46,15 +46,39 @@
     </div>
 
     <script>
-        const senhaAcesso = prompt("Digite a senha para acessar o sistema:");
+        // --- CONTROLE DE ACESSO POR SESSÃO ---
+const SENHA_CORRETA = "aduana"; // Defina sua senha aqui
 
-        if (senhaAcesso !== "aduana") {
-    alert("Acesso negado!");
-    document.body.innerHTML = "<h1>Acesso bloqueado.</h1>";
-} else {
-    // Se a senha estiver correta, carrega o banco
-    carregarDados();
+function verificarAcesso() {
+    // Verifica se já existe a marcação de "autorizado" nesta sessão
+    if (sessionStorage.getItem("autorizado") === "true") {
+        carregarDados();
+        return;
+    }
+
+    // Se não estiver autorizado, pede a senha
+    const tentativa = prompt("Digite a senha de acesso:");
+
+    if (tentativa === SENHA_CORRETA) {
+        sessionStorage.setItem("autorizado", "true");
+        carregarDados();
+    } else {
+        alert("Senha incorreta!");
+        document.body.innerHTML = `
+            <div class="flex h-screen items-center justify-center bg-slate-100 text-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-red-600">Acesso Negado</h1>
+                    <p class="mb-4">Você não tem permissão para ver esta página.</p>
+                    <button onclick="location.reload()" class="bg-blue-600 text-white px-4 py-2 rounded">Tentar Novamente</button>
+                </div>
+            </div>
+        `;
+    }
 }
+
+// Em vez de chamar carregarDados() direto no final do script, 
+// chamaremos a verificação:
+verificarAcesso();
         // CONFIGURAÇÕES DO SUPABASE
        const SUPABASE_URL = 'https://qyadsgivfqzmtjgzmxhr.supabase.co';
        const SUPABASE_KEY = 'sb_publishable_PcsW3cKl6uRz1x4jSwQulw_QC4T1pMP';
@@ -165,6 +189,7 @@
     </script>
 </body>
 </html>
+
 
 
 
