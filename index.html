@@ -58,7 +58,11 @@
         // CONFIGURAÇÕES DO SUPABASE
        const SUPABASE_URL = 'https://qyadsgivfqzmtjgzmxhr.supabase.co';
        const SUPABASE_KEY = 'sb_publishable_PcsW3cKl6uRz1x4jSwQulw_QC4T1pMP';
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  global: {
+    headers: { 'x-app-secret': 'aduana' } // DEVE SER IGUAL AO DO SQL
+  }
+});
 
         let abaAtual = 'pendente';
 
@@ -161,5 +165,6 @@
     </script>
 </body>
 </html>
+
 
 
