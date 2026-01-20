@@ -47,13 +47,17 @@
 
     <script>
     const SUPABASE_URL = 'https://qyadsgivfqzmtjgzmxhr.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_PcsW3cKl6uRz1x4jSwQulw_QC4T1pMP';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5YWRzZ2l2ZnF6bXRqZ3pteGhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4MzE1MjcsImV4cCI6MjA4NDQwNzUyN30.Mn3eX8HzJ20CySynGriqju78qlWlYcXZr7LE9QMh9y0'; // Verifique se começa com eyJhbG...
     const SENHA_CORRETA = "aduana";
-    
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const APP_SECRET = "aduana"; // O segredo que você configurou no RLS do banco
+
+    // Inicialização com cabeçalho de segurança
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        global: { headers: { 'x-app-secret': APP_SECRET } }
+    });
+
     let abaAtual = 'pendente';
 
-    // 1. FUNÇÃO DE SEGURANÇA (Sessão)
     function verificarAcesso() {
         if (sessionStorage.getItem("autorizado") === "true") {
             iniciarApp();
@@ -64,98 +68,89 @@
                 iniciarApp();
             } else {
                 alert("Senha incorreta!");
-                document.body.innerHTML = "<h1 class='p-10 text-center font-bold'>Acesso negado. Recarregue a página para tentar de novo.</h1>";
+                document.body.innerHTML = "<h1 class='p-10 text-center font-bold'>Acesso negado. Recarregue para tentar de novo.</h1>";
             }
         }
     }
 
-    // 2. FUNÇÃO QUE INICIA TUDO
     function iniciarApp() {
-        carregarDados();    // Carrega a primeira vez
-        ativarRealtime();   // Fica ouvindo mudanças
+        carregarDados();
+        ativarRealtime();
     }
 
-    // 3. FUNÇÃO REALTIME (O segredo para não dar F5)
     function ativarRealtime() {
         _supabase
             .channel('mudancas-processos')
-            .on('postgres_changes', { 
-                event: '*', 
-                schema: 'public', 
-                table: 'processos' 
-            }, (payload) => {
-                console.log('Mudança detectada!', payload);
-                carregarDados(); // Recarrega a lista automaticamente quando algo muda no banco
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'processos' }, () => {
+                carregarDados();
             })
             .subscribe();
     }
 
-    // 4. BUSCAR DADOS (Mesma lógica de antes, mas ordenada)
-   async function carregarDados() {
-    const { data, error } = await _supabase
-        .from('processos')
-        .select('*')
-        .eq('status', abaAtual)
-        .order('data_eta', { ascending: true });
+    async function carregarDados() {
+        const { data, error } = await _supabase
+            .from('processos')
+            .select('*')
+            .eq('status', abaAtual)
+            .order('data_eta', { ascending: true });
 
-    if (error) return;
-
-    const tabela = document.getElementById('tabelaCorpo');
-    tabela.innerHTML = '';
-
-    // Pegamos a data de hoje e zeramos as horas para comparar apenas os dias
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-
-    data.forEach(item => {
-        const dataEta = new Date(item.data_eta + 'T00:00:00'); // Garante leitura correta da data
-        let corDestaque = '';
-
-        // Só aplica cores de alerta se estivermos na aba "Pendentes"
-        if (abaAtual === 'pendente') {
-            if (dataEta.getTime() === hoje.getTime()) {
-                corDestaque = 'bg-yellow-100 border-l-4 border-l-yellow-500'; // Hoje
-            } else if (dataEta < hoje) {
-                corDestaque = 'bg-red-50 border-l-4 border-l-red-500'; // Atrasado
-            }
+        if (error) {
+            console.error("Erro Supabase:", error.message);
+            return;
         }
 
-        tabela.innerHTML += `
-            <tr class="${corDestaque} hover:bg-blue-50 border-b transition-colors">
-                <td class="p-3 w-40">
-                    <input type="date" value="${item.data_eta}" 
-                        onchange="atualizarCampo('${item.id}', 'data_eta', this.value)"
-                        class="w-full border-transparent hover:border-gray-300 border bg-transparent rounded p-1 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-bold">
-                </td>
-                <td class="p-3 font-medium text-slate-700">
-                    ${item.referencia}
-                    ${corDestaque.includes('red') ? '<span class="text-[10px] block text-red-600 font-bold uppercase">Atrasado</span>' : ''}
-                    ${corDestaque.includes('yellow') ? '<span class="text-[10px] block text-yellow-700 font-bold uppercase">Chega Hoje</span>' : ''}
-                </td>
-                <td class="p-3 text-slate-600">${item.cliente}</td>
-                <td class="p-3">
-                    <input type="text" value="${item.observacoes || ''}" 
-                        onblur="atualizarCampo('${item.id}', 'observacoes', this.value)"
-                        class="w-full border-transparent hover:border-gray-300 border bg-transparent rounded p-1 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none">
-                </td>
-                <td class="p-3 flex justify-center space-x-1">
-                    ${abaAtual === 'pendente' ? 
-                        `<button onclick="alterarStatus('${item.id}', 'finalizado')" class="bg-green-500 text-white p-1.5 rounded hover:bg-green-600 text-[10px] font-bold uppercase tracking-tighter shadow-sm">Concluir</button>` : 
-                        `<button onclick="alterarStatus('${item.id}', 'pendente')" class="bg-orange-500 text-white p-1.5 rounded hover:bg-orange-600 text-[10px] font-bold uppercase tracking-tighter shadow-sm">Reabrir</button>`
-                    }
-                    <button onclick="excluir('${item.id}')" class="bg-slate-200 text-slate-700 p-1.5 rounded hover:bg-red-500 hover:text-white text-[10px] font-bold uppercase tracking-tighter transition">Excluir</button>
-                </td>
-            </tr>
-        `;
-    });
-}
-    // --- FUNÇÕES DE INTERAÇÃO ---
+        const tabela = document.getElementById('tabelaCorpo');
+        tabela.innerHTML = '';
+
+        // Data de hoje formatada como YYYY-MM-DD para comparação precisa
+        const hojeObj = new Date();
+        const hojeString = hojeObj.toISOString().split('T')[0];
+
+        data.forEach(item => {
+            let corDestaque = '';
+            
+            if (abaAtual === 'pendente') {
+                if (item.data_eta === hojeString) {
+                    corDestaque = 'bg-yellow-100 border-l-4 border-l-yellow-500';
+                } else if (item.data_eta < hojeString) {
+                    corDestaque = 'bg-red-50 border-l-4 border-l-red-500';
+                }
+            }
+
+            tabela.innerHTML += `
+                <tr class="${corDestaque} hover:bg-blue-50 border-b transition-colors">
+                    <td class="p-3 w-40">
+                        <input type="date" value="${item.data_eta}" 
+                            onchange="atualizarCampo('${item.id}', 'data_eta', this.value)"
+                            class="w-full border-transparent hover:border-gray-300 border bg-transparent rounded p-1 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-bold">
+                    </td>
+                    <td class="p-3 font-medium text-slate-700">
+                        ${item.referencia}
+                        ${item.data_eta < hojeString && abaAtual === 'pendente' ? '<span class="text-[10px] block text-red-600 font-bold uppercase">Atrasado</span>' : ''}
+                        ${item.data_eta === hojeString && abaAtual === 'pendente' ? '<span class="text-[10px] block text-yellow-700 font-bold uppercase">Chega Hoje</span>' : ''}
+                    </td>
+                    <td class="p-3 text-slate-600">${item.cliente}</td>
+                    <td class="p-3">
+                        <input type="text" value="${item.observacoes || ''}" 
+                            onblur="atualizarCampo('${item.id}', 'observacoes', this.value)"
+                            class="w-full border-transparent hover:border-gray-300 border bg-transparent rounded p-1 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none">
+                    </td>
+                    <td class="p-3 flex justify-center space-x-1">
+                        ${abaAtual === 'pendente' ? 
+                            `<button onclick="alterarStatus('${item.id}', 'finalizado')" class="bg-green-500 text-white p-1.5 rounded hover:bg-green-600 text-[10px] font-bold uppercase shadow-sm">Concluir</button>` : 
+                            `<button onclick="alterarStatus('${item.id}', 'pendente')" class="bg-orange-500 text-white p-1.5 rounded hover:bg-orange-600 text-[10px] font-bold uppercase shadow-sm">Reabrir</button>`
+                        }
+                        <button onclick="excluir('${item.id}')" class="bg-slate-200 text-slate-700 p-1.5 rounded hover:bg-red-500 hover:text-white text-[10px] font-bold uppercase transition">Excluir</button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
 
     async function atualizarCampo(id, campo, valor) {
         const updateData = {};
         updateData[campo] = valor;
         await _supabase.from('processos').update(updateData).eq('id', id);
-        // Não precisa chamar carregarDados() aqui, o Realtime fará isso!
     }
 
     async function alterarStatus(id, novoStatus) {
@@ -170,7 +165,6 @@
 
     function mudarAba(status) {
         abaAtual = status;
-        // Lógica visual das abas...
         document.getElementById('tab-pendente').className = status === 'pendente' ? 'pb-2 px-1 font-bold border-b-2 border-blue-600 text-blue-600' : 'pb-2 px-1 font-bold border-b-2 border-transparent text-gray-400';
         document.getElementById('tab-finalizado').className = status === 'finalizado' ? 'pb-2 px-1 font-bold border-b-2 border-blue-600 text-blue-600' : 'pb-2 px-1 font-bold border-b-2 border-transparent text-gray-400';
         carregarDados();
@@ -185,16 +179,16 @@
             observacoes: document.getElementById('observacoes').value,
             status: 'pendente'
         };
-        await _supabase.from('processos').insert([novo]);
+        const { error } = await _supabase.from('processos').insert([novo]);
+        if (error) alert("Erro ao inserir: " + error.message);
         e.target.reset();
     });
 
-    // Iniciar verificação
     verificarAcesso();
-
-    </script>
+</script>
 </body>
 </html>
+
 
 
 
