@@ -46,19 +46,19 @@
     </div>
 
     <script>
-    setInterval(carregarDados, 30000); // Atualiza sozinho a cada 30 segundos   
     const SUPABASE_URL = 'https://qyadsgivfqzmtjgzmxhr.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5YWRzZ2l2ZnF6bXRqZ3pteGhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4MzE1MjcsImV4cCI6MjA4NDQwNzUyN30.Mn3eX8HzJ20CySynGriqju78qlWlYcXZr7LE9QMh9y0'; // Verifique se começa com eyJhbG...
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5YWRzZ2l2ZnF6bXRqZ3pteGhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4MzE1MjcsImV4cCI6MjA4NDQwNzUyN30.Mn3eX8HzJ20CySynGriqju78qlWlYcXZr7LE9QMh9y0'; 
     const SENHA_CORRETA = "aduana";
-    const APP_SECRET = "aduana"; // O segredo que você configurou no RLS do banco
+    const APP_SECRET = "aduana"; 
 
-    // Inicialização com cabeçalho de segurança
+    // Inicialização do Cliente
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
         global: { headers: { 'x-app-secret': APP_SECRET } }
     });
 
     let abaAtual = 'pendente';
 
+    // 1. Controle de Acesso
     function verificarAcesso() {
         if (sessionStorage.getItem("autorizado") === "true") {
             iniciarApp();
@@ -74,11 +74,15 @@
         }
     }
 
+    // 2. Início do App
     function iniciarApp() {
         carregarDados();
         ativarRealtime();
+        // O timer de 30s só começa aqui, com segurança
+        setInterval(carregarDados, 30000); 
     }
 
+    // 3. Realtime
     function ativarRealtime() {
         _supabase
             .channel('mudancas-processos')
@@ -88,6 +92,7 @@
             .subscribe();
     }
 
+    // 4. Carregar Dados com Alertas Visuais
     async function carregarDados() {
         const { data, error } = await _supabase
             .from('processos')
@@ -103,13 +108,11 @@
         const tabela = document.getElementById('tabelaCorpo');
         tabela.innerHTML = '';
 
-        // Data de hoje formatada como YYYY-MM-DD para comparação precisa
         const hojeObj = new Date();
         const hojeString = hojeObj.toISOString().split('T')[0];
 
         data.forEach(item => {
             let corDestaque = '';
-            
             if (abaAtual === 'pendente') {
                 if (item.data_eta === hojeString) {
                     corDestaque = 'bg-yellow-100 border-l-4 border-l-yellow-500';
@@ -148,26 +151,31 @@
         });
     }
 
+    // --- INTERAÇÕES ---
+
     async function atualizarCampo(id, campo, valor) {
-        const updateData = {};
-        updateData[campo] = valor;
-        await _supabase.from('processos').update(updateData).eq('id', id);
+        const { error } = await _supabase.from('processos').update({ [campo]: valor }).eq('id', id);
+        if (error) alert("Erro ao salvar: " + error.message);
     }
 
     async function alterarStatus(id, novoStatus) {
-        await _supabase.from('processos').update({ status: novoStatus }).eq('id', id);
+        const { error } = await _supabase.from('processos').update({ status: novoStatus }).eq('id', id);
+        if (error) alert("Erro ao mudar status: " + error.message);
+        else carregarDados(); 
     }
 
     async function excluir(id) {
         if (confirm('Excluir permanentemente?')) {
-            await _supabase.from('processos').delete().eq('id', id);
+            const { error } = await _supabase.from('processos').delete().eq('id', id);
+            if (error) alert("Erro ao excluir: " + error.message);
+            else carregarDados();
         }
     }
 
     function mudarAba(status) {
         abaAtual = status;
-        document.getElementById('tab-pendente').className = status === 'pendente' ? 'pb-2 px-1 font-bold border-b-2 border-blue-600 text-blue-600' : 'pb-2 px-1 font-bold border-b-2 border-transparent text-gray-400';
-        document.getElementById('tab-finalizado').className = status === 'finalizado' ? 'pb-2 px-1 font-bold border-b-2 border-blue-600 text-blue-600' : 'pb-2 px-1 font-bold border-b-2 border-transparent text-gray-400';
+        document.getElementById('tab-pendente').className = status === 'pendente' ? 'pb-2 px-1 font-bold border-b-2 border-blue-600 text-blue-600 transition-all' : 'pb-2 px-1 font-bold border-b-2 border-transparent text-gray-400 transition-all';
+        document.getElementById('tab-finalizado').className = status === 'finalizado' ? 'pb-2 px-1 font-bold border-b-2 border-blue-600 text-blue-600 transition-all' : 'pb-2 px-1 font-bold border-b-2 border-transparent text-gray-400 transition-all';
         carregarDados();
     }
 
@@ -182,13 +190,17 @@
         };
         const { error } = await _supabase.from('processos').insert([novo]);
         if (error) alert("Erro ao inserir: " + error.message);
-        e.target.reset();
+        else {
+            e.target.reset();
+            carregarDados();
+        }
     });
 
     verificarAcesso();
 </script>
 </body>
 </html>
+
 
 
 
