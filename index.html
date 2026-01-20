@@ -46,6 +46,15 @@
     </div>
 
     <script>
+        const senhaAcesso = prompt("Digite a senha para acessar o sistema:");
+
+        if (senhaAcesso !== "aduana") {
+    alert("Acesso negado!");
+    document.body.innerHTML = "<h1>Acesso bloqueado.</h1>";
+} else {
+    // Se a senha estiver correta, carrega o banco
+    carregarDados();
+}
         // CONFIGURAÇÕES DO SUPABASE
        const SUPABASE_URL = 'https://qyadsgivfqzmtjgzmxhr.supabase.co';
        const SUPABASE_KEY = 'sb_publishable_PcsW3cKl6uRz1x4jSwQulw_QC4T1pMP';
@@ -152,4 +161,5 @@
     </script>
 </body>
 </html>
+
 
